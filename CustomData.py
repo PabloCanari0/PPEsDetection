@@ -1,5 +1,6 @@
 import os
 import torch
+import string
 from collections import defaultdict
 import pandas as pd
 import albumentations as A
@@ -17,34 +18,36 @@ from torchvision.utils import draw_bounding_boxes
 # It also provides a visualizator of dataset images
 
 # FUNCTIONS, CLASSES and TRANSFORMS
-def showDatasetImage(image,bboxes,categories): # Shows image and it's bounding boxes and categories
-    for boxes in bboxes: # For every bounding box
-        image_tensor = F.to_tensor(image) * 255 # Convert image to tensor and re-escalate
-        bboxes_tensor = torch.tensor(bboxes, dtype=torch.float32) # Convert bounding boxes to tensors
-        image_with_boxes = draw_bounding_boxes(image_tensor.to(torch.uint8), bboxes_tensor, labels=categories, colors="red", width=2)
-        plt.imshow(image_with_boxes.permute(1, 2, 0))  # Reorder channels for visualization (width, height, image)
-        plt.axis('off')
-        plt.show()
+#def showDatasetImage(image,bboxes,categories): # Shows image and it's bounding boxes and categories
+   # for boxes in bboxes: # For every bounding box
+    #    image_tensor = F.to_tensor(image) * 255 # Convert image to tensor and re-escalate
+     #   bboxes_tensor = torch.tensor(bboxes, dtype=torch.float32) # Convert bounding boxes to tensors
+      #  image_with_boxes = draw_bounding_boxes(image_tensor.to(torch.uint8), bboxes_tensor, labels=categories, colors="red", width=2)
+       # plt.imshow(image_with_boxes.permute(1, 2, 0))  # Reorder channels for visualization (width, height, image)
+        #plt.axis('off')
+        #plt.show()
 
-def Visualizator(dataset,index=None): # Reads dataset and calls showImage function
-    Visualize_data=dataset # Choose a dataset to be shown
-    if index is None :index=random.randint(0,len(Visualize_data.PPE_frame)) # Choose a random index from the dataset
-    Sample=Visualize_data.__getitem__(index) # Get the image associated to this random index
-    showDatasetImage(Sample['image'],Sample['bounding_boxes'],Sample['category']) # Call function to show image
+#def Visualizator(dataset,index=None): # Reads dataset and calls showImage function
+    #Visualize_data=dataset # Choose a dataset to be shown
+    #if index is None :index=random.randint(0,len(Visualize_data.PPE_frame)) # Choose a random index from the dataset
+    #Sample=Visualize_data.__getitem__(index) # Get the image associated to this random index
+    #showDatasetImage(Sample['image'],Sample['bounding_boxes'],Sample['category']) # Call function to show image
 
 
 class PPEsDataset(Dataset):
     # Personal Protection Equipment Dataset Class for defining different datasets
 
-    def __init__(self, csv_file, root_dir, transform): # Initialization of the data set
+    def __init__(self, csv_file, root_dir, transform, augmentation_method=None): # Initialization of the data set
         
         # Arguments:
             # csv_file (string): Path to the csv file with annotations.
             # root_dir (string): Directory with all the images.
             # transform (callable, optional): for resizing the dataset or other transforms
+            # augmentation: applies random augmentation to increase the dataset
         self.PPE_frame = pd.read_csv(csv_file) # Converts CSV into dataframe
         self.root_dir = root_dir
         self.transform = transform
+        self.augmentation_method=augmentation_method
 
     def __len__(self): # Return CSV length
         return len(self.PPE_frame)  
@@ -81,11 +84,80 @@ class PPEsDataset(Dataset):
             image = transformed['image']
             bboxes = transformed['bboxes']
             categories = transformed['category']
-        sample = {'image': image, 'bounding_boxes': bboxes, 'category':categories}
+        sample = {'image_name' : image_row, 'image': image, 'bounding_boxes': bboxes, 'category':categories}
         return sample
+    
+    def showDatasetImage(image_name,image,bboxes,categories): # Shows image and it's bounding boxes and categories
+        for boxes in bboxes: # For every bounding box
+            image_tensor = F.to_tensor(image) * 255 # Convert image to tensor and re-escalate
+            bboxes_tensor = torch.tensor(bboxes, dtype=torch.float32) # Convert bounding boxes to tensors
+            image_with_boxes = draw_bounding_boxes(image_tensor.to(torch.uint8), bboxes_tensor, labels=categories, colors="red", width=2)
+            plt.imshow(image_with_boxes.permute(1, 2, 0))  # Reorder channels for visualization (width, height, image)
+            plt.title(image_name)
+            plt.axis('off')
+            plt.show()
+
+    def Visualizator(self,index=None): # Reads dataset and calls showImage function
+        if index is None :index=random.randint(0,len(self.PPE_frame)) # Choose a random index from the dataset
+        Sample=self[index] # Get the image associated to this random index
+        showDatasetImage(Sample['image_name'],Sample['image'],Sample['bounding_boxes'],Sample['category']) # Call function to show image
+    
+    def DataAugmentation(self,NofTransforms): # Applies random data augmentation to increase dataset
+        if augmentation==True: # Only apply data augmentation if it is enabled
+            # Create new dir to store all the new images
+            aug_dir=self.root_dir + "_augmented" # Create the name for the new directory where the augmented images will be stored
+            os.mkdir(aug_dir) # Creates new directory to save augmented images (if directory already exists, it must be erased)
+            print(aug_dir," directory created!")
+            
+            # Create new CSV file for the new images 
+            annotations_path=os.path.join(aug_dir,"augmentation_annotations.csv") # Full path to annotations file
+            aug_annotations=os.open(annotations_path,"w") # Open (create if not existing) the CSV file for the augmented dataset (write mode) 
+            aug_annotations.write(",".join(["filename","width","height","class","xmin","ymin","xmax","ymax"]) + "\n") # First line
+            
+            ImageNames=[] # Will store image names to avoid applying augmentations more than once to the same image
+
+            for idx, _ in self.PPE_frame.iterrows(): # For all the rows in the CSV file
+                Sample=self[index] # Get image name, image, bounding boxes and categories
+
+                if Sample['image_name'] not in ImageNames: # Checks if the image has already been treated
+                    ImageNames.append(Sample['image_name']) # If not, mark it as treated for future iterations
+                    
+                    # Moves the untreated image into the directory
+                    shutil.copy(os.path.join(self.root_dir,Sample['image_name']),aug_dir)                    
+                    
+                    # Writes new lines (for all the categories present in the image) for untreated or initial image in CSV file
+                    for categories,bboxes in zip(Sample['category'], Sample['bounding_boxes']): 
+                        aug_annotations.write(Sample['image_name'],"640,640",categories,bboxes,"\n")
+                    
+                    for _ in range(NofTransforms): # Repeat NofTransforms times
+                        augmented=self.augmentation_method(image=Sample['image'],bboxes=Sample['bounding_boxes'],category=Sample['category']) # Applies random augmentation method
+                        aug_image = augmented['image']
+                        aug_bboxes = augmented['bboxes']
+                        aug_categories = augmented['category']
+
+                        # Generate new name for the augmented image and load it in the new augmentation directory
+                        new_name=Sample['image_name'].rsplit(".", 1)[0] + ''.join(random.choice(string.ascii_lowercase+string.ascii_digits) for _ in range(6)) + ".jpg"
+                        new_path=os.path.join(aug_dir,new_name) # Full new image path
+                        new_image=plt,imsave(new_path,aug_image) # Save image
+
+                        # Write new lines in CSV for individual augmented image, with all it's categories and bounding boxes
+                        for categories,bboxes in zip(aug_bboxes,aug_categories):
+                            aug_annotations.write(new_name,"640,640",categories,bboxes,"\n")
+                    
+
+            
+
 
 transformResize=A.Compose([A.Resize(height=640,width=640)], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])) # Resize transform for normalization
-
+transformAugmentation=A.OneOf([ # Group of transformations to randomly pick from for data augmentation of specific data sest
+    A.ColorJitter(brightness=,contrast=,saturation=,hue=,always_apply=,p=),
+    A.RandomSnow(snow_point_lower=,snow_point_upper,brightness_coeff,always_apply=,p=),
+    A.RandomGravel(),
+    A.RandomBrightnessContrast(brightness_limit=,contrast_limit=,brightness_by_max=,always_apply=,p=,),
+    A.RandomRain(slant_lower=,slant_upper=,drop_length=,drop_width=,drop_color=,blur_value=,brightness_coefficient=,rain_type=,always_apply=,p=),
+    A.AdditiveNoise(loc=,scale=(),per_channel=,normalize=,always_apply=,p=),
+    bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])
+], p=1)
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # DATA-SETS:
@@ -293,4 +365,4 @@ print("C:/Users/vgarc/Desktop/TFG/DataSets/gogglessss.v1i.tensorflow \n")
 print(goglesssTRAIN.__countCategory__())
 print(goglesssVALID.__countCategory__())
 
-#Visualizator(TallerYOLOTRAIN)
+TallerYOLOTRAIN.Visualizator
