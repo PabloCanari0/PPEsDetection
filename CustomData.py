@@ -145,25 +145,26 @@ class PPEsDataset(Dataset):
                             aug_annotations.write(new_name,"640,640",categories,bboxes,"\n")
                     
 
-            
-
-
 transformResize=A.Compose([A.Resize(height=640,width=640)], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])) # Resize transform for normalization
-transformAugmentation=A.OneOf([ # Group of transformations to randomly pick from for data augmentation of specific data sest
-    A.ColorJitter(brightness=,contrast=,saturation=,hue=,always_apply=,p=),
-    A.RandomSnow(snow_point_lower=,snow_point_upper,brightness_coeff,always_apply=,p=),
-    A.RandomGravel(),
-    A.RandomBrightnessContrast(brightness_limit=,contrast_limit=,brightness_by_max=,always_apply=,p=,),
-    A.RandomRain(slant_lower=,slant_upper=,drop_length=,drop_width=,drop_color=,blur_value=,brightness_coefficient=,rain_type=,always_apply=,p=),
-    A.AdditiveNoise(loc=,scale=(),per_channel=,normalize=,always_apply=,p=),
+transformAugmentation=A.Compose([A.OneOf([ 
+    A.ColorJitter(brightness=(0.2, 0.8), contrast=(0.3, 0.9), saturation=(0.1, 0.5), hue=(-0.2, 0.2),always_apply=True), # Brightness change
+    A.RandomSnow(snow_point_lower=0.1,snow_point_upper=0.5,brightness_coeff=1.2,always_apply=True),
+    A.RandomRain(slant_lower=-10,slant_upper=10,drop_length=30,drop_width=2,blur_value=5,always_apply=True),
+    A.AdditiveNoise(noise_type="uniform", scale=(0,1),always_apply=True),
+    A.RandomRotate90(p=1.0),
+    A.RandomCrop(height=400,width=400,always_apply=True),
+    A.Perspective(scale=(0.05, 0.1),keep_size=True,always_apply=True),
+    A.CoarseDropout(max_holes=3,max_height=50,max_width=50,always_apply=True)],
+    p=1)],
     bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])
-], p=1)
+    )
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # DATA-SETS:
 backgroundpics=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/background/_annotations.csv",
                           root_dir="C:/Users/vgarc/Desktop/TFG/DataSets/background",
-                          transform=transformResize)
+                          transform=transformResize,
+                          augmentation_method=transformAugmentation)
 
 
 # TEST sets
@@ -365,4 +366,4 @@ print("C:/Users/vgarc/Desktop/TFG/DataSets/gogglessss.v1i.tensorflow \n")
 print(goglesssTRAIN.__countCategory__())
 print(goglesssVALID.__countCategory__())
 
-TallerYOLOTRAIN.Visualizator
+TallerYOLOTRAIN.Visualizator()
