@@ -1,6 +1,5 @@
 import os
 import glob
-import shutil
 from CustomData import * # Includes all available datasets defined as a type of class PPEsDataset and a dataset image visualizator
 # This script allows data frame combination (concatenation) and uses a Data Loader to load in parallel
 # as well as batching and shuffling the chosen data

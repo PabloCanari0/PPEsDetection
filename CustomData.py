@@ -2,6 +2,7 @@ import os
 import torch
 import string
 from collections import defaultdict
+import shutil
 import pandas as pd
 import albumentations as A
 import matplotlib.pyplot as plt
@@ -87,7 +88,7 @@ class PPEsDataset(Dataset):
         sample = {'image_name' : image_row, 'image': image, 'bounding_boxes': bboxes, 'category':categories}
         return sample
     
-    def showDatasetImage(image_name,image,bboxes,categories): # Shows image and it's bounding boxes and categories
+    def showDatasetImage(self,image_name,image,bboxes,categories): # Shows image and it's bounding boxes and categories
         for boxes in bboxes: # For every bounding box
             image_tensor = F.to_tensor(image) * 255 # Convert image to tensor and re-escalate
             bboxes_tensor = torch.tensor(bboxes, dtype=torch.float32) # Convert bounding boxes to tensors
@@ -98,12 +99,12 @@ class PPEsDataset(Dataset):
             plt.show()
 
     def Visualizator(self,index=None): # Reads dataset and calls showImage function
-        if index is None :index=random.randint(0,len(self.PPE_frame)) # Choose a random index from the dataset
+        if index is None :index=random.randint(0,len(self.PPE_frame)-1) # Choose a random index from the dataset
         Sample=self[index] # Get the image associated to this random index
-        showDatasetImage(Sample['image_name'],Sample['image'],Sample['bounding_boxes'],Sample['category']) # Call function to show image
+        self.showDatasetImage(Sample['image_name'],Sample['image'],Sample['bounding_boxes'],Sample['category']) # Call function to show image
     
     def DataAugmentation(self,NofTransforms): # Applies random data augmentation to increase dataset
-        if augmentation==True: # Only apply data augmentation if it is enabled
+        if self.augmentation_method!=None: # Only apply data augmentation if it is enabled
             # Create new dir to store all the new images
             aug_dir=self.root_dir + "_augmented" # Create the name for the new directory where the augmented images will be stored
             os.mkdir(aug_dir) # Creates new directory to save augmented images (if directory already exists, it must be erased)
@@ -111,13 +112,13 @@ class PPEsDataset(Dataset):
             
             # Create new CSV file for the new images 
             annotations_path=os.path.join(aug_dir,"augmentation_annotations.csv") # Full path to annotations file
-            aug_annotations=os.open(annotations_path,"w") # Open (create if not existing) the CSV file for the augmented dataset (write mode) 
+            aug_annotations=open(annotations_path,"w") # Open (create if not existing) the CSV file for the augmented dataset (write mode) 
             aug_annotations.write(",".join(["filename","width","height","class","xmin","ymin","xmax","ymax"]) + "\n") # First line
             
             ImageNames=[] # Will store image names to avoid applying augmentations more than once to the same image
 
             for idx, _ in self.PPE_frame.iterrows(): # For all the rows in the CSV file
-                Sample=self[index] # Get image name, image, bounding boxes and categories
+                Sample=self[idx] # Get image name, image, bounding boxes and categories
 
                 if Sample['image_name'] not in ImageNames: # Checks if the image has already been treated
                     ImageNames.append(Sample['image_name']) # If not, mark it as treated for future iterations
@@ -127,7 +128,7 @@ class PPEsDataset(Dataset):
                     
                     # Writes new lines (for all the categories present in the image) for untreated or initial image in CSV file
                     for categories,bboxes in zip(Sample['category'], Sample['bounding_boxes']): 
-                        aug_annotations.write(Sample['image_name'],"640,640",categories,bboxes,"\n")
+                        aug_annotations.write(f"{Sample['image_name']},640,640,{categories},{bboxes[0]},{bboxes[1]},{bboxes[2]},{bboxes[3]}\n")
                     
                     for _ in range(NofTransforms): # Repeat NofTransforms times
                         augmented=self.augmentation_method(image=Sample['image'],bboxes=Sample['bounding_boxes'],category=Sample['category']) # Applies random augmentation method
@@ -136,19 +137,19 @@ class PPEsDataset(Dataset):
                         aug_categories = augmented['category']
 
                         # Generate new name for the augmented image and load it in the new augmentation directory
-                        new_name=Sample['image_name'].rsplit(".", 1)[0] + ''.join(random.choice(string.ascii_lowercase+string.ascii_digits) for _ in range(6)) + ".jpg"
+                        new_name=Sample['image_name'].rsplit(".", 1)[0] + ''.join(random.choice(string.ascii_lowercase+string.octdigits) for _ in range(6)) + ".jpg"
                         new_path=os.path.join(aug_dir,new_name) # Full new image path
-                        new_image=plt,imsave(new_path,aug_image) # Save image
+                        new_image=plt.imsave(new_path,aug_image) # Save image
 
                         # Write new lines in CSV for individual augmented image, with all it's categories and bounding boxes
                         for categories,bboxes in zip(aug_bboxes,aug_categories):
-                            aug_annotations.write(new_name,"640,640",categories,bboxes,"\n")
+                            aug_annotations.write(f"{new_name},640,640,{categories},{bboxes[0]},{bboxes[1]},{bboxes[2]},{bboxes[3]}\n")
                     
 
 transformResize=A.Compose([A.Resize(height=640,width=640)], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])) # Resize transform for normalization
 transformAugmentation=A.Compose([A.OneOf([ 
     A.ColorJitter(brightness=(0.2, 0.8), contrast=(0.3, 0.9), saturation=(0.1, 0.5), hue=(-0.2, 0.2),always_apply=True), # Brightness change
-    A.RandomSnow(snow_point_lower=0.1,snow_point_upper=0.5,brightness_coeff=1.2,always_apply=True),
+    A.RandomSnow(snow_point_lower=0.1,snow_point_upper=0.5,brightness_coeff=1.8,always_apply=True),
     A.RandomRain(slant_lower=-10,slant_upper=10,drop_length=30,drop_width=2,blur_value=5,always_apply=True),
     A.AdditiveNoise(noise_type="uniform", scale=(0,1),always_apply=True),
     A.RandomRotate90(p=1.0),
@@ -365,5 +366,7 @@ print(check_ssVALID.__countCategory__())
 print("C:/Users/vgarc/Desktop/TFG/DataSets/gogglessss.v1i.tensorflow \n")
 print(goglesssTRAIN.__countCategory__())
 print(goglesssVALID.__countCategory__())
+
+backgroundpics.DataAugmentation(NofTransforms=5)
 
 TallerYOLOTRAIN.Visualizator()
