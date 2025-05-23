@@ -1,5 +1,3 @@
-import os
-import glob
 from CustomData import * # Includes all available datasets defined as a type of class PPEsDataset and a dataset image visualizator
 # This script allows data frame combination (concatenation) and uses a Data Loader to load in parallel
 # as well as batching and shuffling the chosen data
@@ -67,5 +65,5 @@ def CombineDatasets(dsets): # Dataset combination (CSV concatenation, class norm
            
 #------------------------------------------------------------------------------------------------------------------------------------------------
 # MAIN
-dsets=[PPEDetectionTRAIN, PPE2TRAIN, TallerYOLOTRAIN, goglesssTRAIN, Heavy_EquipmentTRAIN, RavenLoaderTRAIN, check_ssTRAIN, backgroundpics] # Chosen datasets
+dsets=[PPEDetectionTRAIN, PPE2TRAIN, TallerYOLOTRAIN_augmented, goglesssTRAIN, Heavy_EquipmentTRAIN, RavenLoaderTRAIN, check_ssTRAIN, backgroundpics_augmented] # Chosen datasets
 CombineDatasets(dsets)

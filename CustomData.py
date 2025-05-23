@@ -8,31 +8,12 @@ import albumentations as A
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-import matplotlib.pyplot as plt
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision import transforms, utils
 import torchvision.transforms.functional as F
-import torchvision.utils as vutils
-import torch
 from torchvision.utils import draw_bounding_boxes
 # This script loads all the different datasets gathered using a custom dataset as a class 
 # It also provides a visualizator of dataset images
-
-# FUNCTIONS, CLASSES and TRANSFORMS
-#def showDatasetImage(image,bboxes,categories): # Shows image and it's bounding boxes and categories
-   # for boxes in bboxes: # For every bounding box
-    #    image_tensor = F.to_tensor(image) * 255 # Convert image to tensor and re-escalate
-     #   bboxes_tensor = torch.tensor(bboxes, dtype=torch.float32) # Convert bounding boxes to tensors
-      #  image_with_boxes = draw_bounding_boxes(image_tensor.to(torch.uint8), bboxes_tensor, labels=categories, colors="red", width=2)
-       # plt.imshow(image_with_boxes.permute(1, 2, 0))  # Reorder channels for visualization (width, height, image)
-        #plt.axis('off')
-        #plt.show()
-
-#def Visualizator(dataset,index=None): # Reads dataset and calls showImage function
-    #Visualize_data=dataset # Choose a dataset to be shown
-    #if index is None :index=random.randint(0,len(Visualize_data.PPE_frame)) # Choose a random index from the dataset
-    #Sample=Visualize_data.__getitem__(index) # Get the image associated to this random index
-    #showDatasetImage(Sample['image'],Sample['bounding_boxes'],Sample['category']) # Call function to show image
 
 
 class PPEsDataset(Dataset):
@@ -45,7 +26,13 @@ class PPEsDataset(Dataset):
             # root_dir (string): Directory with all the images.
             # transform (callable, optional): for resizing the dataset or other transforms
             # augmentation: applies random augmentation to increase the dataset
-        self.PPE_frame = pd.read_csv(csv_file) # Converts CSV into dataframe
+ 
+        df = pd.read_csv(csv_file,encoding="utf-8") # Converts CSV into dataframe
+
+        # Filter unwanted categories
+        categories_to_ignore = ['Without Helmet','Without Vest','Without Mask','Without Glass','Without Ear Protectors','Without Glove','Without Shoes','Grader','Mobile_crane']
+        df = df[~df['class'].isin(categories_to_ignore)]
+        self.PPE_frame = df 
         self.root_dir = root_dir
         self.transform = transform
         self.augmentation_method=augmentation_method
@@ -111,10 +98,10 @@ class PPEsDataset(Dataset):
             print(aug_dir," directory created!")
             
             # Create new CSV file for the new images 
-            annotations_path=os.path.join(aug_dir,"augmentation_annotations.csv") # Full path to annotations file
+            annotations_path=os.path.join(aug_dir,"augmentation_annotations.csv").replace("\\", "/") # Full path to annotations file
             aug_annotations=open(annotations_path,"w") # Open (create if not existing) the CSV file for the augmented dataset (write mode) 
             aug_annotations.write(",".join(["filename","width","height","class","xmin","ymin","xmax","ymax"]) + "\n") # First line
-            
+
             ImageNames=[] # Will store image names to avoid applying augmentations more than once to the same image
 
             for idx, _ in self.PPE_frame.iterrows(): # For all the rows in the CSV file
@@ -131,19 +118,21 @@ class PPEsDataset(Dataset):
                         aug_annotations.write(f"{Sample['image_name']},640,640,{categories},{bboxes[0]},{bboxes[1]},{bboxes[2]},{bboxes[3]}\n")
                     
                     for _ in range(NofTransforms): # Repeat NofTransforms times
-                        augmented=self.augmentation_method(image=Sample['image'],bboxes=Sample['bounding_boxes'],category=Sample['category']) # Applies random augmentation method
+                        augmented = self.augmentation_method(image=Sample['image'], bboxes=Sample['bounding_boxes'], category=Sample['category'])
                         aug_image = augmented['image']
                         aug_bboxes = augmented['bboxes']
                         aug_categories = augmented['category']
 
-                        # Generate new name for the augmented image and load it in the new augmentation directory
-                        new_name=Sample['image_name'].rsplit(".", 1)[0] + ''.join(random.choice(string.ascii_lowercase+string.octdigits) for _ in range(6)) + ".jpg"
-                        new_path=os.path.join(aug_dir,new_name) # Full new image path
-                        new_image=plt.imsave(new_path,aug_image) # Save image
-
-                        # Write new lines in CSV for individual augmented image, with all it's categories and bounding boxes
-                        for categories,bboxes in zip(aug_bboxes,aug_categories):
+                        # New name for augmented image
+                        new_name = f"{Sample['image_name'].rsplit('.', 1)[0]}{''.join(random.choices(string.ascii_lowercase + string.octdigits, k=6))}.jpg"
+                        new_path = os.path.join(aug_dir, new_name)
+                        plt.imsave(new_path, aug_image)
+                        
+                         # Write new lines in CSV for individual augmented image, with all it's categories and bounding boxes
+                        for categories,bboxes in zip(aug_categories,aug_bboxes):
                             aug_annotations.write(f"{new_name},640,640,{categories},{bboxes[0]},{bboxes[1]},{bboxes[2]},{bboxes[3]}\n")
+            print("New augmented directory:",aug_dir)
+            print("New augmented CSV file:",annotations_path)
                     
 
 transformResize=A.Compose([A.Resize(height=640,width=640)], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])) # Resize transform for normalization
@@ -157,7 +146,7 @@ transformAugmentation=A.Compose([A.OneOf([
     A.Perspective(scale=(0.05, 0.1),keep_size=True,always_apply=True),
     A.CoarseDropout(max_holes=3,max_height=50,max_width=50,always_apply=True)],
     p=1)],
-    bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])
+    bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'],min_visibility=0.1)
     )
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -240,7 +229,8 @@ PPEDetectionTRAIN=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/PPE 
 # 4. TallerYOLO Computer Vision Project (https://universe.roboflow.com/gonzalo-8ifbf/talleryolo-mc28j)
 TallerYOLOTRAIN=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/TallerYOLO.v3i.tensorflow/train/_annotations.csv",
                            root_dir="C:/Users/vgarc/Desktop/TFG/DataSets/TallerYOLO.v3i.tensorflow/train",
-                           transform=transformResize)
+                           transform=transformResize,
+                           augmentation_method=transformAugmentation)
 
 
 # 5. PPE2 Computer Vision Project (https://universe.roboflow.com/bangga/ppe-2-ynh14)
@@ -320,8 +310,6 @@ goglesssVALID=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/goggless
                           transform=transformResize)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------
-print("C:/Users/vgarc/Desktop/TFG/DataSets/background \n")
-print(backgroundpics.__countCategory__())
 
 print("C:/Users/vgarc/Desktop/TFG/DataSets/PPE Dataset for Workplace Safety \n")
 print(WorkplaceSafetyTEST.__countCategory__())
@@ -367,6 +355,21 @@ print("C:/Users/vgarc/Desktop/TFG/DataSets/gogglessss.v1i.tensorflow \n")
 print(goglesssTRAIN.__countCategory__())
 print(goglesssVALID.__countCategory__())
 
-backgroundpics.DataAugmentation(NofTransforms=5)
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# DATA AUGMENTATION (generate here any augmented datasets)
 
-TallerYOLOTRAIN.Visualizator()
+backgroundpics.DataAugmentation(NofTransforms=5) # Apply 5 transforms to each image separately
+
+backgroundpics_augmented=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/background_augmented/augmentation_annotations.csv",
+                          root_dir="C:/Users/vgarc/Desktop/TFG/DataSets/background_augmented",
+                          transform=transformResize)
+print(backgroundpics_augmented.__countCategory__())
+
+TallerYOLOTRAIN.DataAugmentation(NofTransforms=8) # Apply 6 transforms to each image separately 
+TallerYOLOTRAIN_augmented=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/TallerYOLO.v3i.tensorflow/train_augmented/augmentation_annotations.csv",
+                          root_dir="C:/Users/vgarc/Desktop/TFG/DataSets/TallerYOLO.v3i.tensorflow/train_augmented",
+                          transform=transformResize)
+print(TallerYOLOTRAIN_augmented.__countCategory__())
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# VISUALIZATOR (visualize any image from any dataset with the visualizator function from the Dataset class)

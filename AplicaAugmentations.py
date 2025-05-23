@@ -4,45 +4,89 @@ import albumentations as A
 import torch
 import torchvision.transforms as transforms
 import csv
-import cv2
 from PIL import Image
 from torchvision.transforms import v2
 from torchvision import tv_tensors
 #   This script allows data augmentation to be applied to a certain list of images of a certain class. The bounding boxes
 # will also be modified and the CSV file extended with the new labels from the new images 
-def dataAugmentation(n,m,clase,path):
-    # n: nº of transforms
-    # m: magnitude of transforms
-    # images: of certain class to be transformed 
-    # clase: class or type of images to extract
-    # path: to CSV file 
-    annotations=open('***********************************', mode='r') # Opens CSV files with labels of the images 
-    reader = csv.reader(annotations) # Create reader to enable search
-    transforms=[A.Compose([A.RandomCrop()], bbox_params=A.BboxParams(format='pascal_voc')), # Define a list of transforms, they will be chosen randomly
-                A.Compose([]),
-                A.Compose([]),
-                A.Compose([]),
-                A.Compose([]),
-                A.Compose([]),
-                ]
-    images=classFinder()
-    for I in images: # For all the images of a certain class (*.jpg files)
-        image = Image.open(I) # Open JPEG file 
-        actual_row=[] 
-        for row in reader: # Go over all the rows
-            if I in str(row[0]): actual_row.append(row[4:7])  #Until you find the name of the image jpg file and save the row with labels. Multiple rows possible (multiple boxes in the same image)
-        bboxes=actual_row.reshape(-1,4) # Extract bounding box corners coordinates [xmin ymin xmax ymax]
-        while n>0: # Repeat n times to image I
-            image_=transform[randint(0,9)](image=image, bboxes=bboxes) # Apply random transform from the 10 available to image and box
-            transformed_image = transformed['image'] #Get transformed image
-            transformed_image = transformed_image.resize(***************************) # Normalize size
-            transformed_bboxes = transformed['bboxes'] #Get transformed bounding boxes
-            new_name = ''.join(random.choices(string.ascii_letters + string.digits, k=20)) # Create a random name for new image
-            for i in bboxes.shape[0]: # For all the bounding boxes
-                annotations.append(new_name,SIZE, )
+
+def dataAugmentation(n, m, classs, csv_path, image_path):
+    # Load existing annotations CSV
+    annotations = pd.read_csv(csv_path)
+    
+    # Define a list of transformations to apply
+    transforms = [
+        A.Compose([
+            A.RandomCrop(width=200, height=200),  # Example: random crop
+            A.HorizontalFlip(p=0.5)               # Example: horizontal flip
+        ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])),
+        A.Compose([], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])),  # Placeholder
+        # Add more transforms if needed
+    ]
+    
+    images = classFinder(classs, csv_path, image_path)  # Find all images of a certain class
+    
+    new_rows = []  # List to store new annotation rows
+
+    for I in images:
+        image_name = os.path.basename(I)
+        image = np.array(Image.open(I).convert("RGB"))  # Convert image to NumPy array
+
+        # Filter annotations for this specific image
+        rows = annotations[annotations['filename'] == image_name]
+        
+        bboxes = []
+        categories = []
+        for _, row in rows.iterrows():
+            bboxes.append([row['xmin'], row['ymin'], row['xmax'], row['ymax']])
+            categories.append(row['label'])
+
+        # Apply n random augmentations
+        for _ in range(n):
+            transform = random.choice(transforms)
+            augmented = transform(image=image, bboxes=bboxes, category=categories)
+            
+            transformed_image = Image.fromarray(augmented['image'])  # Convert back to PIL image
+            transformed_image = transformed_image.resize((640, 640))  # Resize to desired size
+            transformed_bboxes = augmented['bboxes']
+            transformed_categories = augmented['category']
+            
+            # Generate unique name for the augmented image
+            new_name = f"{image_name.rsplit('.', 1)[0]}_{''.join(random.choices(string.ascii_lowercase + string.digits, k=6))}.jpg"
+            new_path = os.path.join(image_path, new_name)
+            transformed_image.save(new_path)
+
+            # Add one row for each bbox in the transformed image
+            for label, box in zip(transformed_categories, transformed_bboxes):
+                new_rows.append({
+                    'filename': new_name,
+                    'width': 640,
+                    'height': 640,
+                    'label': label,
+                    'xmin': box[0],
+                    'ymin': box[1],
+                    'xmax': box[2],
+                    'ymax': box[3],
+                })
+
+    # Append new annotations and save to CSV
+    if new_rows:
+        annotations = pd.concat([annotations, pd.DataFrame(new_rows)], ignore_index=True)
+        annotations.to_csv(csv_path, index=False)
 
 
-def classFinder(): # Searches for images with certain labels in dataset 
+
+def classFinder(classs, csv_path, image_path): # Searches for images with certain labels in dataset
+    annotations = pd.read_csv(csv_path)
+    images=[] # Will store all the images of a certain class 
+    for _, row in annotations.iterrows(): # Iterate over CSV file
+        if row['class']==classs: 
+            new_entry=image_path.join(row['filename']) # Capture image path 
+            if os.path_exists(new_entry):
+                images.append(new_entry)
+    return images
+
+
 
 
 
