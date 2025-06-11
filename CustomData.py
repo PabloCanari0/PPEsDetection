@@ -32,7 +32,8 @@ class PPEsDataset(Dataset):
         # Filter unwanted categories
         categories_to_ignore = ['Without Helmet','Without Vest','Without Mask','Without Glass','Without Ear Protectors','Without Glove','Without Shoes','Grader','Mobile_crane']
         df = df[~df['class'].isin(categories_to_ignore)]
-        self.PPE_frame = df 
+        self.csv_file=csv_file
+        self.PPE_frame = df
         self.root_dir = root_dir
         self.transform = transform
         self.augmentation_method=augmentation_method
@@ -373,3 +374,4 @@ print(TallerYOLOTRAIN_augmented.__countCategory__())
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # VISUALIZATOR (visualize any image from any dataset with the visualizator function from the Dataset class)
+TallerYOLOTRAIN_augmented.Visualizator()

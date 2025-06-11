@@ -59,7 +59,7 @@ def CombineDatasets(dsets): # Dataset combination (CSV concatenation, class norm
     FinalDataset=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/FinalDataset/final_dataset_normalized.csv",
                           root_dir="C:/Users/vgarc/Desktop/TFG/DataSets/FinalDataset",
                           transform=transformResize)
-
+    
     for key,values in FinalDataset.__countCategory__().items(): # Show category count in Final Dataset
         print(f"{key}: {values}")
            
