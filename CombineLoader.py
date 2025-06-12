@@ -1,6 +1,6 @@
 from CustomData import * # Includes all available datasets defined as a type of class PPEsDataset and a dataset image visualizator
-# This script allows data frame combination (concatenation) and uses a Data Loader to load in parallel
-# as well as batching and shuffling the chosen data
+# This script allows data frame combination (concatenation) 
+
 # Dataset list from which to choose (each number on the list includes train, test and validation sets for the same dataset
 # add the suffix TEST, TRAIN, VALID to access one of the specific sets for each dataset):
 #   1. WorkPlaceSafety
@@ -66,4 +66,4 @@ def CombineDatasets(dsets): # Dataset combination (CSV concatenation, class norm
 #------------------------------------------------------------------------------------------------------------------------------------------------
 # MAIN
 dsets=[PPEDetectionTRAIN, PPE2TRAIN, TallerYOLOTRAIN_augmented, goglesssTRAIN, Heavy_EquipmentTRAIN, RavenLoaderTRAIN, check_ssTRAIN, backgroundpics_augmented] # Chosen datasets
-CombineDatasets(dsets)
+CombineDatasets(dsets) # Creates final dataset

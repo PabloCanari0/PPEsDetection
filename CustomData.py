@@ -139,15 +139,15 @@ class PPEsDataset(Dataset):
 transformResize=A.Compose([A.Resize(height=640,width=640)], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'])) # Resize transform for normalization
 transformAugmentation=A.Compose([A.OneOf([ 
     A.ColorJitter(brightness=(0.2, 0.8), contrast=(0.3, 0.9), saturation=(0.1, 0.5), hue=(-0.2, 0.2),always_apply=True), # Brightness change
-    A.RandomSnow(snow_point_lower=0.1,snow_point_upper=0.5,brightness_coeff=1.8,always_apply=True),
-    A.RandomRain(slant_lower=-10,slant_upper=10,drop_length=30,drop_width=2,blur_value=5,always_apply=True),
-    A.AdditiveNoise(noise_type="uniform", scale=(0,1),always_apply=True),
-    A.RandomRotate90(p=1.0),
-    A.RandomCrop(height=400,width=400,always_apply=True),
-    A.Perspective(scale=(0.05, 0.1),keep_size=True,always_apply=True),
-    A.CoarseDropout(max_holes=3,max_height=50,max_width=50,always_apply=True)],
+    A.RandomSnow(snow_point_lower=0.1,snow_point_upper=0.5,brightness_coeff=1.8,always_apply=True), # Snow effect
+    A.RandomRain(slant_lower=-10,slant_upper=10,drop_length=30,drop_width=2,blur_value=5,always_apply=True), # Rain effect
+    A.AdditiveNoise(noise_type="uniform", scale=(0,1),always_apply=True), # Offset noise
+    A.RandomRotate90(p=1.0), # Random rotation
+    A.RandomCrop(height=400,width=400,always_apply=True), # Crop certain parts of the image randomly
+    A.Perspective(scale=(0.05, 0.1),keep_size=True,always_apply=True), # Change the perspective of the image
+    A.CoarseDropout(max_holes=3,max_height=50,max_width=50,always_apply=True)], # Certain pixels of the image are ignored
     p=1)],
-    bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'],min_visibility=0.1)
+    bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category'],min_visibility=0.1) #Specify bounding box format to apply transform to them also
     )
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -311,7 +311,7 @@ goglesssVALID=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/goggless
                           transform=transformResize)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------
-
+# Show number of elements per category for differet sets
 print("C:/Users/vgarc/Desktop/TFG/DataSets/PPE Dataset for Workplace Safety \n")
 print(WorkplaceSafetyTEST.__countCategory__())
 print(WorkplaceSafetyTRAIN.__countCategory__())
