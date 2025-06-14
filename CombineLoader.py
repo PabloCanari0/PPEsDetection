@@ -1,9 +1,6 @@
-import os
-import glob
-import shutil
 from CustomData import * # Includes all available datasets defined as a type of class PPEsDataset and a dataset image visualizator
-# This script allows data frame combination (concatenation) and uses a Data Loader to load in parallel
-# as well as batching and shuffling the chosen data
+# This script allows data frame combination (concatenation) 
+
 # Dataset list from which to choose (each number on the list includes train, test and validation sets for the same dataset
 # add the suffix TEST, TRAIN, VALID to access one of the specific sets for each dataset):
 #   1. WorkPlaceSafety
@@ -62,11 +59,11 @@ def CombineDatasets(dsets): # Dataset combination (CSV concatenation, class norm
     FinalDataset=PPEsDataset(csv_file="C:/Users/vgarc/Desktop/TFG/DataSets/FinalDataset/final_dataset_normalized.csv",
                           root_dir="C:/Users/vgarc/Desktop/TFG/DataSets/FinalDataset",
                           transform=transformResize)
-
+    
     for key,values in FinalDataset.__countCategory__().items(): # Show category count in Final Dataset
         print(f"{key}: {values}")
            
 #------------------------------------------------------------------------------------------------------------------------------------------------
 # MAIN
-dsets=[PPEDetectionTRAIN, PPE2TRAIN, TallerYOLOTRAIN, goglesssTRAIN, Heavy_EquipmentTRAIN, RavenLoaderTRAIN, check_ssTRAIN, backgroundpics] # Chosen datasets
-CombineDatasets(dsets)
+dsets=[PPEDetectionTRAIN, PPE2TRAIN, TallerYOLOTRAIN_augmented, goglesssTRAIN, Heavy_EquipmentTRAIN, RavenLoaderTRAIN, check_ssTRAIN, backgroundpics_augmented] # Chosen datasets
+CombineDatasets(dsets) # Creates final dataset

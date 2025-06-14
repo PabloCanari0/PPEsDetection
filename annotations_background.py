@@ -12,7 +12,7 @@ for I in imgs: # Recorre todas las imágenes
         f.write(",".join(["filename","width","height","class","xmin","ymin","xmax","ymax"]) + "\n")
 
     else: # i=1
-        f.write(f"{I},640,640,background,0,0,0,0\n") # Escribir etiquetas para cada imagen
+        f.write(f"{I},640,640,background,0,0,1,1\n") # Escribir etiquetas para cada imagen
 
 
 
